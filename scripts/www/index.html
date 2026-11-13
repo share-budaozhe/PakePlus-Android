@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#185fa5">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="链路计算器">
+<title>微波链路衰减计算器</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --line:#e5e7eb;
+    --text:#1f2937; --muted:#6b7280; --hint:#9ca3af;
+    --primary:#185fa5; --primary-l:#e6f1fb;
+    --teal:#0f6e56; --teal-l:#e1f5ee;
+    --amber:#854f0b; --amber-l:#faeeda;
+    --red:#a32d2d; --red-l:#fcebeb;
+    --green:#3b6d11; --green-l:#eaf3de;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--text);
+    font-size:14px; line-height:1.6;
+    padding-bottom:80px;
+  }
+  .wrap{max-width:640px; margin:0 auto; padding:16px 14px;}
+  header{
+    background:linear-gradient(135deg,#185fa5,#0f6e56);
+    color:#fff; padding:22px 18px; border-radius:var(--radius);
+    margin-bottom:16px;
+  }
+  header h1{font-size:20px; font-weight:600; margin-bottom:4px;}
+  header p{font-size:13px; opacity:.92;}
+
+  /* 顶部 Tab */
+  .tabs{display:flex; gap:8px; margin-bottom:16px; position:sticky; top:8px; z-index:10;}
+  .tab{
+    flex:1; text-align:center; padding:10px 6px; border-radius:10px;
+    background:var(--card); border:1px solid var(--line); cursor:pointer;
+    font-size:14px; font-weight:500; color:var(--muted); transition:.15s;
+  }
+  .tab.active{background:var(--primary); color:#fff; border-color:var(--primary);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px; margin-bottom:14px;
+  }
+  .card h2{font-size:16px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:6px;}
+  .card h3{font-size:14px; font-weight:600; margin:14px 0 8px; color:var(--primary);}
+
+  .row{display:flex; gap:10px; flex-wrap:wrap;}
+  .field{flex:1; min-width:140px; margin-bottom:10px;}
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px;}
+  .field input, .field select{
+    width:100%; padding:9px 10px; border:1px solid var(--line);
+    border-radius:8px; font-size:14px; color:var(--text); background:#fafafa;
+    font-family:inherit;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--primary); background:#fff;}
+  .field .unit{font-size:12px; color:var(--hint); margin-top:2px;}
+
+  .btn{
+    width:100%; padding:12px; border:none; border-radius:10px;
+    background:var(--primary); color:#fff; font-size:15px; font-weight:600;
+    cursor:pointer; font-family:inherit; margin-top:4px;
+  }
+  .btn:active{opacity:.85;}
+  .btn.sec{background:var(--teal);}
+
+  /* 结果区 */
+  .result{margin-top:14px;}
+  .res-line{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 12px; border-radius:8px; margin-bottom:6px;
+    background:#f9fafb; border:1px solid var(--line);
+  }
+  .res-line .k{font-size:13px; color:var(--muted);}
+  .res-line .v{font-size:15px; font-weight:600; text-align:right;}
+  .res-line .v small{font-weight:400; color:var(--hint); font-size:12px;}
+
+  .badge{display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600;}
+  .badge.ok{background:var(--green-l); color:var(--green);}
+  .badge.warn{background:var(--amber-l); color:var(--amber);}
+  .badge.bad{background:var(--red-l); color:var(--red);}
+
+  .verdict{
+    padding:12px; border-radius:10px; margin-top:10px; font-size:13px;
+    border:1px solid var(--line);
+  }
+  .verdict.ok{background:var(--green-l); border-color:#c0dd97;}
+  .verdict.warn{background:var(--amber-l); border-color:#fac775;}
+  .verdict.bad{background:var(--red-l); border-color:#f7c1c1;}
+  .verdict .title{font-weight:600; margin-bottom:4px;}
+
+  /* 换算卡片 */
+  .conv-box{margin-bottom:12px;}
+  .conv-box .io{display:flex; gap:8px; align-items:center; margin-bottom:8px;}
+  .conv-box input{flex:1; padding:10px; border:1px solid var(--line); border-radius:8px; font-size:15px; font-family:inherit;}
+  .conv-box .arrow{color:var(--hint); font-size:18px;}
+  .conv-box .out{
+    padding:10px 12px; background:var(--primary-l); border-radius:8px;
+    font-size:16px; font-weight:600; color:var(--primary); min-height:40px;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;
+  }
+  .conv-box .out small{font-weight:400; color:var(--muted); font-size:12px;}
+
+  /* 心算示例 */
+  .tip{
+    padding:10px 12px; border-radius:8px; margin-bottom:8px;
+    background:#f9fafb; border:1px solid var(--line); font-size:13px;
+  }
+  .tip b{color:var(--primary);}
+  .tip .step{color:var(--muted); font-size:12px; display:block; margin-top:3px;}
+  .tag{
+    display:inline-block; background:var(--primary-l); color:var(--primary);
+    padding:1px 8px; border-radius:12px; font-size:11px; font-weight:600; margin-bottom:6px;
+  }
+  .mono{font-family:"SF Mono",Consolas,monospace; background:#eef1f4; padding:1px 5px; border-radius:4px; font-size:13px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{padding:8px 6px; border-bottom:1px solid var(--line); text-align:left;}
+  th{color:var(--muted); font-weight:500; font-size:12px; background:#fafafa;}
+  td.num{font-family:"SF Mono",Consolas,monospace; text-align:right;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>微波链路衰减计算器</h1>
+    <p>衰减链路核算 · 档位换算 · 经验心算</p>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-panel="p1">链路计算</div>
+    <div class="tab" data-panel="p2">档位换算</div>
+    <div class="tab" data-panel="p3">经验心算</div>
+    <div class="tab" data-panel="p4">公式速查</div>
+  </div>
+
+  <!-- ============ 面板1：链路计算 ============ -->
+  <div class="panel active" id="p1">
+    <div class="card">
+      <h2>📡 系统参数</h2>
+      <div class="row">
+        <div class="field">
+          <label>工作频率 (GHz)</label>
+          <input type="number" id="freq" value="5" step="0.01">
+          <div class="unit">用于计算天线有效口径 Ae = G·λ²/4π</div>
+        </div>
+        <div class="field">
+          <label>天线增益 (dB)</label>
+          <input type="number" id="antGain" value="10" step="0.1">
+          <div class="unit">角锥喇叭天线</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>目标功率密度下限 (W/cm²)</label>
+          <input type="number" id="sMin" value="0.01" step="0.001">
+        </div>
+        <div class="field">
+          <label>目标功率密度上限 (W/cm²)</label>
+          <input type="number" id="sMax" value="1000" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⚡ 脉冲参数</h2>
+      <div class="row">
+        <div class="field">
+          <label>重频 PRF (Hz)</label>
+          <input type="number" id="prf" value="1000" step="1">
+        </div>
+        <div class="field">
+          <label>脉宽 (μs)</label>
+          <input type="number" id="pw" value="1" step="0.1">
+        </div>
+      </div>
+      <div class="res-line">
+        <span class="k">占空比 D = PRF × 脉宽</span>
+        <span class="v" id="dutyOut">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔎 检波器参数</h2>
+      <div class="row">
+        <div class="field">
+          <label>动态范围 (dB)</label>
+          <input type="number" id="detDR" value="30" step="1">
+          <div class="unit">指标要求 &gt;20dB</div>
+        </div>
+        <div class="field">
+          <label>输入上限 (dBm)</label>
+          <input type="number" id="detMax" value="30" step="0.1">
+          <div class="unit">最大承受/饱和功率</div>
+        </div>
+      </div>
+      <div class="res-line">
+        <span class="k">检波输入窗口</span>
+        <span class="v" id="detWin">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🎛️ 衰减链路</h2>
+      <div class="row">
+        <div class="field">
+          <label>一级波导衰减 (dB)</label>
+          <input type="number" id="att1" value="30" step="1">
+        </div>
+        <div class="field">
+          <label>波同转换插损 (dB)</label>
+          <input type="number" id="ilWb" value="0.3" step="0.1">
+        </div>
+        <div class="field">
+          <label>二级衰减 (dB)</label>
+          <input type="number" id="att2" value="0" step="0.5">
+          <div class="unit">0=程控直通；可输入任意档</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>二级衰减器峰值额定 (W)</label>
+          <input type="number" id="att2Peak" value="30" step="1">
+          <div class="unit">用于安全判定</div>
+        </div>
+        <div class="field">
+          <label>二级衰减器平均额定 (W)</label>
+          <input type="number" id="att2Avg" value="2" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn" onclick="calcLink()">计算链路</button>
+
+    <div class="card result" id="linkResult" style="display:none;"></div>
+  </div>
+
+  <!-- ============ 面板2：档位换算 ============ -->
+  <div class="panel" id="p2">
+    <div class="card">
+      <h2>🔄 功率单位换算</h2>
+      <div class="conv-box">
+        <label class="tag">dBm → 功率</label>
+        <div class="io">
+          <input type="number" id="c_dbm" value="30" placeholder="dBm">
+          <span class="arrow">→</span>
+          <div class="out" id="c_dbm_out">—</div>
+        </div>
+      </div>
+      <div class="conv-box">
+        <label class="tag">功率 (mW) → dBm</label>
+        <div class="io">
+          <input type="number" id="c_mw" value="1000" placeholder="mW">
+          <span class="arrow">→</span>
+          <div class="out" id="c_mw_out">—</div>
+        </div>
+      </div>
+      <div class="conv-box">
+        <label class="tag">dB → 功率倍数</label>
+        <div class="io">
+          <input type="number" id="c_db" value="30" placeholder="dB">
+          <span class="arrow">→</span>
+          <div class="out" id="c_db_out">—</div>
+        </div>
+      </div>
+      <div class="conv-box">
+        <label class="tag">W/cm² → W/m²</label>
+        <div class="io">
+          <input type="number" id="c_wcm" value="1" placeholder="W/cm²">
+          <span class="arrow">→</span>
+          <div class="out" id="c_wcm_out">—</div>
+        </div>
+      </div>
+      <div class="conv-box">
+        <label class="tag">占空比 → 峰值/平均功率</label>
+        <div class="io">
+          <input type="number" id="c_peak" value="28.6" placeholder="峰值 W">
+          <span class="arrow">×</span>
+          <input type="number" id="c_duty" value="0.1" placeholder="占空比 %" style="max-width:100px;">
+          <span class="arrow">=</span>
+          <div class="out" id="c_duty_out">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📐 天线口径换算</h2>
+      <div class="conv-box">
+        <label class="tag">频率 + 增益 → 有效口径 Ae</label>
+        <div class="io">
+          <input type="number" id="c_freq2" value="5" placeholder="频率 GHz" style="max-width:110px;">
+          <input type="number" id="c_gain2" value="10" placeholder="增益 dB" style="max-width:90px;">
+          <span class="arrow">→</span>
+          <div class="out" id="c_ae_out">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 面板3：经验心算 ============ -->
+  <div class="panel" id="p3">
+    <div class="card">
+      <h2>🧠 常用 dB 速记表</h2>
+      <table>
+        <tr><th>dB</th><th>功率倍数</th><th>电压倍数</th><th>心算要点</th></tr>
+        <tr><td class="num">0</td><td class="num">1</td><td class="num">1</td><td>基准</td></tr>
+        <tr><td class="num">3</td><td class="num">2</td><td class="num">1.41</td><td>功率翻倍 ≈ 3dB</td></tr>
+        <tr><td class="num">6</td><td class="num">4</td><td class="num">2</td><td>3dB 叠加</td></tr>
+        <tr><td class="num">10</td><td class="num">10</td><td class="num">3.16</td><td>10 倍</td></tr>
+        <tr><td class="num">20</td><td class="num">100</td><td class="num">10</td><td>100 倍</td></tr>
+        <tr><td class="num">30</td><td class="num">1000</td><td class="num">31.6</td><td>1000 倍</td></tr>
+        <tr><td class="num">40</td><td class="num">10⁴</td><td class="num">100</td><td>1 万倍</td></tr>
+        <tr><td class="num">50</td><td class="num">10⁵</td><td class="num">316</td><td>10 万倍</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>⚡ dBm 速记</h2>
+      <div class="tip"><b>0 dBm = 1 mW</b><span class="step">这是所有 dBm 的锚点</span></div>
+      <div class="tip"><b>30 dBm = 1 W</b><span class="step">0dBm + 30dB = 1mW × 1000 = 1000mW</span></div>
+      <div class="tip"><b>10 dBm = 10 mW</b><span class="step">1mW × 10</span></div>
+      <div class="tip"><b>-30 dBm = 1 μW</b><span class="step">1mW ÷ 1000</span></div>
+    </div>
+
+    <div class="card">
+      <h2>🎯 实战心算示例</h2>
+      <div class="tip">
+        <b>例1：800mV 检波电压 → 多少 dBm？</b>
+        <span class="step">P = V²/R = 0.8²/50 = 0.0128W = 12.8mW；dBm = 10×lg12.8 ≈ 11.07 → <b>≈ +11 dBm</b>（口算：12.8mW 比 10mW 略大，比 20mW 小，所以 10~13dBm 之间）</span>
+      </div>
+      <div class="tip">
+        <b>例2：28.6W 峰值，占空比 0.1%，平均多少？</b>
+        <span class="step">28.6W × 0.001 = 0.0286W = 28.6mW → 平均功率 <b>≈ 28.6mW</b>（口算：除以 1000）</span>
+      </div>
+      <div class="tip">
+        <b>例3：30dB 衰减，功率降多少倍？</b>
+        <span class="step">10^(30/10) = 10³ = <b>1000 倍</b>（口算：30dB = 3×10dB = 10×10×10）</span>
+      </div>
+      <div class="tip">
+        <b>例4：5GHz、增益10dB，天线口径多大？</b>
+        <span class="step">λ = 3×10⁸/5×10⁹ = 0.06m；Ae = 10×0.06²/4π ≈ <b>28.6 cm²</b>（口算：0.06²=0.0036，×10÷12.6≈0.00286m²）</span>
+      </div>
+      <div class="tip">
+        <b>例5：功率密度 1000W/cm² 在 28.6cm² 天线上收多少功率？</b>
+        <span class="step">P = S×Ae = 1000 × 28.6 = 28600W = <b>28.6kW</b>（口算：直接相乘）</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💡 心算口诀</h2>
+      <div class="tip"><b>功率 dB 规律</b><span class="step">+3dB ≈ ×2，+10dB = ×10，每 +10dB 加一个零；−3dB ≈ ÷2，−10dB = ÷10</span></div>
+      <div class="tip"><b>dBm 锚点</b><span class="step">记住 0dBm=1mW、30dBm=1W 两个锚点，其余加减 10 或 3 推算</span></div>
+      <div class="tip"><b>占空比</b><span class="step">重频×脉宽，1kHz×1μs=0.1%；平均功率 = 峰值 × 占空比</span></div>
+    </div>
+  </div>
+
+  <!-- ============ 面板4：公式速查 ============ -->
+  <div class="panel" id="p4">
+    <div class="card">
+      <h2>📐 天线与口径</h2>
+      <div class="tip"><b>有效口径</b><span class="step">Ae = G·λ² / 4π　（G 为线性增益，λ 为波长）</span></div>
+      <div class="tip"><b>增益(dB) → 线性增益</b><span class="step">G = 10^(G<sub>dB</sub>/10)</span></div>
+      <div class="tip"><b>波长与频率</b><span class="step">λ = c / f，c = 3×10⁸ m/s；例：5GHz → λ=6cm，10GHz → λ=3cm</span></div>
+      <div class="tip"><b>功率密度 → 接收功率</b><span class="step">P<sub>接收</sub> = S × Ae　（S 为功率密度 W/m²）</span></div>
+      <div class="tip"><b>单位换算</b><span class="step">1 W/cm² = 10⁴ W/m²；1 mW/cm² = 10 W/m²</span></div>
+    </div>
+
+    <div class="card">
+      <h2>⚡ 功率与 dBm</h2>
+      <div class="tip"><b>电压 → 功率</b><span class="step">P = V²/R；50Ω 下 P = V²/50</span></div>
+      <div class="tip"><b>功率 → dBm</b><span class="step">P<sub>dBm</sub> = 10·lg(P[mW])</span></div>
+      <div class="tip"><b>dBm → 功率</b><span class="step">P[mW] = 10^(P<sub>dBm</sub>/10)</span></div>
+      <div class="tip"><b>dB → 倍数</b><span class="step">功率比 = 10^(dB/10)；电压比 = 10^(dB/20)</span></div>
+      <div class="tip"><b>功率密度动态(dB)</b><span class="step">10·lg(S<sub>max</sub>/S<sub>min</sub>)（功率类量纲，用 10·lg）</span></div>
+    </div>
+
+    <div class="card">
+      <h2>🔗 链路预算</h2>
+      <div class="tip"><b>总衰减</b><span class="step">A<sub>总</sub> = A₁ + A₂ + … + Aₙ（各级 dB 直接相加）</span></div>
+      <div class="tip"><b>衰减后功率</b><span class="step">P<sub>out</sub> = P<sub>in</sub> − A<sub>总</sub>（dBm 相减）</span></div>
+      <div class="tip"><b>衰减倍数</b><span class="step">P<sub>out</sub>/P<sub>in</sub> = 10^(−A/10)；30dB → ÷1000，20dB → ÷100</span></div>
+      <div class="tip"><b>自由空间损耗</b><span class="step">FSL(dB) = 20·lg(d) + 20·lg(f) + 92.45（d:km，f:GHz）</span></div>
+      <div class="tip"><b>弗里斯传输</b><span class="step">P<sub>r</sub> = P<sub>t</sub> + G<sub>t</sub> + G<sub>r</sub> − FSL（dB 形式）</span></div>
+    </div>
+
+    <div class="card">
+      <h2>⏱ 脉冲参数</h2>
+      <div class="tip"><b>占空比</b><span class="step">D = PRF × τ（τ 为脉宽，秒）</span></div>
+      <div class="tip"><b>平均功率</b><span class="step">P<sub>avg</sub> = P<sub>peak</sub> × D</span></div>
+      <div class="tip"><b>单脉冲能量</b><span class="step">E = P<sub>peak</sub> × τ</span></div>
+      <div class="tip"><b>峰值/平均差(dB)</b><span class="step">10·lg(1/D)；D=0.1% → 相差 30dB</span></div>
+    </div>
+
+    <div class="card">
+      <h2>🔎 检波器</h2>
+      <div class="tip"><b>动态范围</b><span class="step">DR = P<sub>max</sub> − P<sub>min</sub>（dB）</span></div>
+      <div class="tip"><b>输入窗口</b><span class="step">上限(饱和) − DR ≤ P<sub>in</sub> ≤ 上限(饱和)</span></div>
+      <div class="tip"><b>检波电压 → 功率</b><span class="step">P = V²/R（V 为检波直流输出电压）</span></div>
+    </div>
+
+    <div class="card">
+      <h2>📏 驻波与反射</h2>
+      <div class="tip"><b>驻波比 → 反射系数</b><span class="step">|Γ| = (VSWR−1)/(VSWR+1)</span></div>
+      <div class="tip"><b>回波损耗</b><span class="step">RL(dB) = −20·lg|Γ|</span></div>
+      <div class="tip"><b>失配损耗</b><span class="step">ML(dB) = −10·lg(1−|Γ|²)</span></div>
+      <div class="tip"><b>VSWR=1.3 时</b><span class="step">|Γ|≈0.13，回波损耗≈17.7dB，失配损耗≈0.075dB</span></div>
+    </div>
+
+    <div class="card">
+      <h2>🌡 噪声与灵敏度</h2>
+      <div class="tip"><b>热噪声功率</b><span class="step">P<sub>n</sub> = kTB；k=1.38×10⁻²³，B 为带宽</span></div>
+      <div class="tip"><b>噪声系数级联(Friis)</b><span class="step">F = F₁ + (F₂−1)/G₁ + (F₃−1)/(G₁G₂) + …</span></div>
+      <div class="tip"><b>灵敏度</b><span class="step">S<sub>min</sub>(dBm) = −174 + 10·lg(B) + NF + SNR</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== 通用工具 =====
+  function g(id){ return document.getElementById(id); }
+  function num(id){ const v=parseFloat(g(id).value); return isNaN(v)?0:v; }
+  function fmt(v, d){ d=(d===undefined)?2:d; return v.toFixed(d); }
+  function log10(x){ return Math.log10(x); }
+
+  // dBm <-> 功率
+  function dBm2mW(dbm){ return Math.pow(10, dbm/10); }
+  function mW2dBm(mw){ return 10*log10(mw); }
+
+  // 天线有效口径 (m²)
+  function calcAe(freqGHz, gainDb){
+    const lam = 3e8/(freqGHz*1e9);
+    const gain = Math.pow(10, gainDb/10);
+    return gain*lam*lam/(4*Math.PI);
+  }
+
+  // ===== Tab 切换 =====
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      g(t.dataset.panel).classList.add('active');
+    });
+  });
+
+  // ===== 面板1：链路计算 =====
+  function calcLink(){
+    const freq = num('freq');
+    const gainDb = num('antGain');
+    const sMin = num('sMin');   // W/cm²
+    const sMax = num('sMax');
+    const prf = num('prf');
+    const pw = num('pw')*1e-6;  // 秒
+    const detDR = num('detDR');
+    const detMax = num('detMax'); // dBm
+    const att1 = num('att1');
+    const ilWb = num('ilWb');
+    const att2 = num('att2');
+    const att2Peak = num('att2Peak');
+    const att2Avg = num('att2Avg');
+
+    // 占空比
+    const duty = prf * pw;
+    g('dutyOut').innerHTML = fmt(duty*100,3)+'% &nbsp;<small>('+fmt(duty,4)+')</small>';
+
+    // 检波窗口
+    const detLo = detMax - detDR;
+    g('detWin').innerHTML = fmt(detLo,1)+' ~ '+fmt(detMax,1)+' dBm &nbsp;<small>(动态 '+detDR+'dB)</small>';
+
+    // 天线口径
+    const Ae = calcAe(freq, gainDb);
+    const AeCm = Ae*1e4;
+
+    // 总衰减
+    const IL = att1 + ilWb + att2;
+
+    // 天线接收功率 (目标上下限, 峰值)
+    const sMin_m2 = sMin*1e4;
+    const sMax_m2 = sMax*1e4;
+    const pRxLo = sMin_m2 * Ae;   // W
+    const pRxHi = sMax_m2 * Ae;   // W
+    const pRxLo_dBm = mW2dBm(pRxLo*1000);
+    const pRxHi_dBm = mW2dBm(pRxHi*1000);
+
+    // 检波器收到的功率 (目标上下限处)
+    const pDetLo = pRxLo_dBm - IL;
+    const pDetHi = pRxHi_dBm - IL;
+
+    // 二级衰减器输入功率 (测上限时)
+    const p2In = pRxHi * Math.pow(10, -(att1+ilWb)/10);  // W 峰值
+    const p2In_avg = p2In * duty;  // W 平均
+
+    // 一级衰减器输入 (测上限时)
+    const p1In = pRxHi;  // W 峰值
+
+    // 可测功率密度范围 (固定当前衰减下)
+    const S_hi_cm = (Math.pow(10,(detMax+IL)/10)/1000)/Ae/1e4;
+    const S_lo_cm = (Math.pow(10,(detLo+IL)/10)/1000)/Ae/1e4;
+
+    // 判据
+    const lowOk = pDetLo >= detLo;   // 下限能否测到
+    const highOk = pDetHi <= detMax; // 上限是否过载
+    const p2PeakOk = p2In <= att2Peak;
+    const p2AvgOk = p2In_avg <= att2Avg;
+
+    // 生成结果 HTML
+    let html = '<h2>📊 计算结果</h2>';
+
+    html += '<h3>天线与口径</h3>';
+    html += resLine('频率', freq+' GHz');
+    html += resLine('波长 λ', fmt(3e8/(freq*1e9)*100,2)+' cm');
+    html += resLine('有效口径 Ae', fmt(AeCm,2)+' cm²');
+
+    html += '<h3>功率密度 → 接收功率</h3>';
+    html += resLine('下限 '+sMin+' W/cm²', fmt(pRxLo*1000,2)+' mW = '+fmt(pRxLo_dBm,2)+' dBm');
+    html += resLine('上限 '+sMax+' W/cm²', fmt(pRxHi/1000,3)+' kW = '+fmt(pRxHi_dBm,2)+' dBm');
+
+    html += '<h3>检波器接收功率（当前衰减 '+fmt(IL,1)+'dB）</h3>';
+    html += resLine('测下限时', fmt(pDetLo,2)+' dBm', lowOk?'ok':'bad', lowOk?'可测':'低于下限 '+fmt(detLo,1)+'dBm 测不到');
+    html += resLine('测上限时', fmt(pDetHi,2)+' dBm', highOk?'ok':'bad', highOk?'可测':'超过上限 '+fmt(detMax,1)+'dBm 过载');
+
+    html += '<h3>器件功率承受（测上限时）</h3>';
+    html += resLine('一级衰减器输入峰值', fmt(p1In/1000,3)+' kW');
+    html += resLine('二级衰减器输入峰值', fmt(p2In,2)+' W', p2PeakOk?'ok':'bad', p2PeakOk?'≤峰值额定'+att2Peak+'W ✓':'超峰值额定');
+    html += resLine('二级衰减器输入平均', fmt(p2In_avg*1000,1)+' mW', p2AvgOk?'ok':'bad', p2AvgOk?'≤平均额定'+att2Avg+'W ✓':'超平均额定');
+    html += resLine('占空比', fmt(duty*100,3)+'%');
+
+    html += '<h3>当前衰减下的可测功率密度范围</h3>';
+    html += resLine('可测范围', fmt(S_lo_cm,3)+' ~ '+fmt(S_hi_cm,2)+' W/cm²');
+    html += resLine('要求范围', sMin+' ~ '+sMax+' W/cm²');
+
+    // 综合结论
+    let verdict='ok', vtitle='✅ 链路安全、覆盖完整', vdesc='当前衰减配置下，目标功率密度两端均落在检波窗口内，且器件峰值/平均功率均未超限。';
+    if(!lowOk && !highOk){ verdict='bad'; vtitle='❌ 两端均不满足'; vdesc='下限测不到（衰减太大压死小信号），上限过载（衰减不足烧后端）。需改为程控/可换衰减器分段覆盖。'; }
+    else if(!lowOk){ verdict='warn'; vtitle='⚠️ 下限测不到'; vdesc='当前固定衰减过大，0.01W/cm² 级小信号被压到检波下限以下。建议减小衰减或改程控衰减器（测下限时拨到低衰减档/直通）。'; }
+    else if(!highOk){ verdict='bad'; vtitle='❌ 上限过载'; vdesc='当前衰减不足，高功率端会烧毁检波器/二级衰减器。需增大衰减量。'; }
+    else if(!p2PeakOk){ verdict='warn'; vtitle='⚠️ 二级衰减器峰值超限'; vdesc='测上限时二级衰减器输入峰值 '+fmt(p2In,1)+'W 超过峰值额定 '+att2Peak+'W，有瞬时击穿风险。建议提高峰值额定或增大一级衰减。'; }
+    else if(!p2AvgOk){ verdict='warn'; vtitle='⚠️ 二级衰减器平均功率超限'; vdesc='平均功率 '+fmt(p2In_avg*1000,1)+'mW 超过额定 '+att2Avg+'W，有热烧毁风险。'; }
+
+    html += '<div class="verdict '+verdict+'"><div class="title">'+vtitle+'</div>'+vdesc+'</div>';
+
+    g('linkResult').innerHTML = html;
+    g('linkResult').style.display = 'block';
+    g('linkResult').scrollIntoView({behavior:'smooth'});
+  }
+
+  function resLine(k, v, status, hint){
+    let badge = '';
+    if(status==='ok') badge = '<span class="badge ok">OK</span>';
+    else if(status==='bad') badge = '<span class="badge bad">超限</span>';
+    const hintHtml = hint ? '<small style="display:block;color:#9ca3af;font-size:11px;">'+hint+'</small>' : '';
+    return '<div class="res-line"><span class="k">'+k+'</span><span class="v">'+v+' '+badge+hintHtml+'</span></div>';
+  }
+
+  // ===== 面板2：档位换算 =====
+  function bindConv(inputId, outId, fn){
+    const input = g(inputId);
+    const update = ()=>{ g(outId).innerHTML = fn(parseFloat(input.value)); };
+    input.addEventListener('input', update);
+    update();
+  }
+
+  bindConv('c_dbm','c_dbm_out', v=>{
+    if(isNaN(v)) return '请输入';
+    const mw = dBm2mW(v);
+    let s = fmt(mw,3)+' mW';
+    if(mw>=1000) s += ' = '+fmt(mw/1000,4)+' W';
+    if(mw<1) s += ' = '+fmt(mw*1000,3)+' μW';
+    return s+' <small>10^('+v+'/10)</small>';
+  });
+
+  bindConv('c_mw','c_mw_out', v=>{
+    if(isNaN(v)) return '请输入';
+    return fmt(mW2dBm(v),2)+' dBm <small>10×lg('+v+')</small>';
+  });
+
+  bindConv('c_db','c_db_out', v=>{
+    if(isNaN(v)) return '请输入';
+    const k = Math.pow(10,v/10);
+    let s = '';
+    if(k>=1e5) s = k.toExponential(2);
+    else s = fmt(k, Math.abs(v)<10?2:1);
+    return s+' 倍 <small>10^('+v+'/10)</small>';
+  });
+
+  bindConv('c_wcm','c_wcm_out', v=>{
+    if(isNaN(v)) return '请输入';
+    return fmt(v*1e4,1)+' W/m² <small>×10⁴</small>';
+  });
+
+  // 占空比联动
+  function updateDuty(){
+    const peak = parseFloat(g('c_peak').value);
+    const duty = parseFloat(g('c_duty').value)/100;
+    if(isNaN(peak)||isNaN(duty)){ g('c_duty_out').innerHTML='请输入'; return; }
+    const avg = peak*duty;
+    let s = fmt(avg,4)+' W';
+    if(avg<1) s += ' = '+fmt(avg*1000,2)+' mW';
+    return g('c_duty_out').innerHTML = s+' <small>峰值×占空比</small>';
+  }
+  g('c_peak').addEventListener('input', updateDuty);
+  g('c_duty').addEventListener('input', updateDuty);
+  updateDuty();
+
+  // 天线口径联动
+  function updateAe(){
+    const f = parseFloat(g('c_freq2').value);
+    const gain = parseFloat(g('c_gain2').value);
+    if(isNaN(f)||isNaN(gain)){ g('c_ae_out').innerHTML='请输入'; return; }
+    const lam = 3e8/(f*1e9);
+    const Ae = calcAe(f, gain);
+    g('c_ae_out').innerHTML = fmt(Ae*1e4,2)+' cm² <small>λ='+fmt(lam*100,2)+'cm</small>';
+  }
+  g('c_freq2').addEventListener('input', updateAe);
+  g('c_gain2').addEventListener('input', updateAe);
+  updateAe();
+
+  // 初始计算一次
+  calcLink();
+
+  // 注册 Service Worker（PWA 离线缓存）
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function (err) {
+        console.log('SW 注册失败（本地 file:// 打开属正常）:', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>
